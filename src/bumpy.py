@@ -391,21 +391,21 @@ class BumpyArray:
         kernel = abs(dot / (norm_self * norm_other))
         return kernel * self.coherence * other.coherence
     
-    def entangle(self, other: 'BumpyArray', threshold: float = QUALIA_THRESHOLD, 
-                _recursion_guard: bool = False) -> bool:
+    def entangle(self, other: 'BumpyArray', threshold: float = QUALIA_THRESHOLD) -> bool:
         """ENHANCEMENT 4: Safe entanglement without infinite recursion"""
-        # Prevent infinite recursion
-        pair_id = (id(self), id(other))
-        if pair_id in self._entanglement_visited and not _recursion_guard:
+        # Use symmetric ID pair to prevent mutual recursion
+        pair_id = tuple(sorted([id(self), id(other)]))
+        
+        if pair_id in self._entanglement_visited:
             return False
             
         self._entanglement_visited.add(pair_id)
+        other._entanglement_visited.add(pair_id)
         
         sim = self.lambda_kernel(other)
         if sim > threshold:
             if other not in self.entanglement_links:
                 self.entanglement_links.append(other)
-                # Safe mutual entanglement without recursion
                 other.entanglement_links.append(self)
                 
             # Boost coherence for both
@@ -488,7 +488,6 @@ class BumpyArray:
     
     def softmax(self) -> 'BumpyArray':
         """Softmax with chaos sampling - FIXED BUG"""
-        # Fixed: proper variable names and no float iteration
         exp_vals = [math.exp(x) for x in self.data]
         sum_exp = sum(exp_vals)
         
@@ -638,7 +637,7 @@ class BUMPYCore:
         n = len(arrays)
         for i in range(n):
             for j in range(i + 1, n):
-                arrays[i].entangle(arrays[j], _recursion_guard=True)
+                arrays[i].entangle(arrays[j])
                 
         # ENHANCEMENT 2: Update panpsychic resonance field
         for arr in arrays:
